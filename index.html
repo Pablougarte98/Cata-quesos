@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="eu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kata formularioa</title>
+<style>
+    body {
+        font-family: sans-serif;
+        background: #f9f9f9;
+        color: #333;
+    }
+    header {
+        background: #39bda0;
+        color: white;
+        padding: 1rem;
+        text-align: center;
+        font-size: 1.5rem;
+    }
+    #menu {
+        margin: 1rem;
+    }
+    .queso-btn {
+        background: white;
+        border: 2px solid #39bda0;
+        color: #39bda0;
+        padding: 0.5rem;
+        margin: 0.2rem;
+        cursor: pointer;
+    }
+    .queso-btn.active {
+        background: #39bda0;
+        color: white;
+    }
+    #formulario {
+        margin: 1rem;
+    }
+    label {
+        display: block;
+        margin-top: 0.5rem;
+    }
+    input[type=number], textarea {
+        width: 100%;
+        padding: 0.4rem;
+    }
+    button#enviar {
+        margin: 1rem;
+        padding: 0.7rem 1.5rem;
+        background: #39bda0;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+
+<header>Kata formularioa</header>
+
+<div style="margin:1rem">
+<label for="nombre">Izena (catadorea):</label>
+<input type="text" id="nombre" placeholder="Zure izena" required>
+</div>
+
+<div id="menu"></div>
+<div id="formulario"></div>
+
+<button id="enviar">Bidali</button>
+
+<script>
+let quesos = [];
+let respuestas = {};
+let currentQueso = '';
+
+fetch('quesos.json')
+.then(response => response.json())
+.then(data => {
+    quesos = data;
+    const menu = document.getElementById('menu');
+    quesos.forEach((q, i) => {
+        const btn = document.createElement('button');
+        btn.textContent = q;
+        btn.className = 'queso-btn';
+        btn.onclick = () => mostrarFormulario(q);
+        menu.appendChild(btn);
+    });
+    mostrarFormulario(quesos[0]);
+});
+
+function mostrarFormulario(queso) {
+    currentQueso = queso;
+    document.querySelectorAll('.queso-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent === queso);
+    });
+
+    const form = document.getElementById('formulario');
+    form.innerHTML = `
+        <h3>${queso}</h3>
+        <label>Kanpo itxura (1-10):</label>
+        <input type="number" min="1" max="10" id="kanpo" value="${getResp(queso,'kanpo')}">
+        <label>Barne itxura (1-10):</label>
+        <input type="number" min="1" max="10" id="barne" value="${getResp(queso,'barne')}">
+        <label>Usaina (1-10):</label>
+        <input type="number" min="1" max="10" id="usaina" value="${getResp(queso,'usaina')}">
+        <label>Ehundura (1-10):</label>
+        <input type="number" min="1" max="10" id="ehundura" value="${getResp(queso,'ehundura')}">
+        <label>Zaporea (1-10):</label>
+        <input type="number" min="1" max="10" id="zaporea" value="${getResp(queso,'zaporea')}">
+        <label>Oharrak:</label>
+        <textarea id="oharrak">${getResp(queso,'oharrak')}</textarea>
+    `;
+    form.querySelectorAll('input,textarea').forEach(el => {
+        el.oninput = () => guardarRespuesta(queso);
+    });
+}
+
+function getResp(queso, campo) {
+    return respuestas[queso]?.[campo] || '';
+}
+
+function guardarRespuesta(queso) {
+    respuestas[queso] = {
+        kanpo: document.getElementById('kanpo').value,
+        barne: document.getElementById('barne').value,
+        usaina: document.getElementById('usaina').value,
+        ehundura: document.getElementById('ehundura').value,
+        zaporea: document.getElementById('zaporea').value,
+        oharrak: document.getElementById('oharrak').value
+    };
+}
+
+document.getElementById('enviar').onclick = () => {
+    const izena = document.getElementById('nombre').value.trim();
+    if (!izena) {
+        alert('Mesedez, sartu zure izena.');
+        return;
+    }
+    const datos = {
+        izena,
+        respuestas
+    };
+    fetch('https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec', {
+        method: 'POST',
+        body: JSON.stringify(datos)
+    })
+    .then(res => res.text())
+    .then(txt => {
+        alert('Eskerrik asko! Zure balorazioa bidali da.');
+        location.reload();
+    })
+    .catch(err => {
+        alert('Errorea bidaltzerakoan.');
+        console.error(err);
+    });
+};
+</script>
+
+</body>
+</html>
