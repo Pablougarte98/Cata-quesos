@@ -66,6 +66,8 @@
 <div id="formulario"></div>
 
 <button id="enviar">Bidali</button>
+<div id="mensajeEstado" style="margin: 1rem; color: #39bda0;"></div>
+
 
 <script>
 let quesos = [];
@@ -131,26 +133,37 @@ function guardarRespuesta(queso) {
 
 document.getElementById('enviar').onclick = () => {
     const izena = document.getElementById('nombre').value.trim();
+    const botonEnviar = document.getElementById('enviar');
+    const mensajeEstado = document.getElementById('mensajeEstado');
+
     if (!izena) {
         alert('Mesedez, sartu zure izena.');
         return;
     }
+
+    botonEnviar.disabled = true;
+    mensajeEstado.textContent = '⏳ Bidaltzen… itxaron mesedez.';
+
     const datos = {
         izena,
         respuestas
     };
+
     fetch('https://script.google.com/macros/s/AKfycbzL5CBm_F-DsD2nOHaF9i-cuCgcyW0CwviinRWRrkvy58Y0QpjlyHa1pzSxmxnfpqLE/exec', {
         method: 'POST',
         body: JSON.stringify(datos)
     })
     .then(res => res.text())
     .then(txt => {
-        alert('Eskerrik asko! Zure balorazioa bidali da.');
-        location.reload();
+        mensajeEstado.textContent = '✅ Eskerrik asko! Zure balorazioa bidali da.';
+        setTimeout(() => location.reload(), 2000);
     })
     .catch(err => {
-        alert('Errorea bidaltzerakoan.');
+        mensajeEstado.textContent = '❌ Errorea bidaltzerakoan. Saiatu berriz.';
         console.error(err);
+    })
+    .finally(() => {
+        botonEnviar.disabled = false;
     });
 };
 </script>
