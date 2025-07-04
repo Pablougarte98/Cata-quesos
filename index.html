@@ -39,7 +39,7 @@
         display: block;
         margin-top: 0.5rem;
     }
-    input[type=number], textarea {
+    textarea {
         width: 100%;
         padding: 0.4rem;
     }
@@ -51,6 +51,32 @@
         border: none;
         cursor: pointer;
     }
+
+    .botonera {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        margin: 0.5rem 0;
+    }
+    .botonera button {
+        flex: 1 0 18%;
+        padding: 0.4rem;
+        background: white;
+        border: 1px solid #39bda0;
+        color: #39bda0;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    .botonera button.selected {
+        background: #39bda0;
+        color: white;
+    }
+
+    #estado {
+        text-align: center;
+        font-weight: bold;
+        margin: 1rem;
+    }
 </style>
 </head>
 <body>
@@ -58,16 +84,15 @@
 <header>Kata formularioa</header>
 
 <div style="margin:1rem">
-<label for="nombre">Izena (Dastatzailea):</label>
+<label for="nombre">Izena (dastatzailea):</label>
 <input type="text" id="nombre" placeholder="Zure izena" required>
 </div>
 
 <div id="menu"></div>
 <div id="formulario"></div>
 
-<div id="mensajeEstado" style="margin: 1rem; color: #39bda0;"></div>    
 <button id="enviar">Bidali</button>
-
+<div id="estado"></div>
 
 <script>
 let quesos = [];
@@ -96,24 +121,47 @@ function mostrarFormulario(queso) {
     });
 
     const form = document.getElementById('formulario');
-    form.innerHTML = `
-        <h3>${queso}</h3>
-        <label>Kanpo itxura (1-10):</label>
-        <input type="number" min="1" max="10" id="kanpo" value="${getResp(queso,'kanpo')}">
-        <label>Barne itxura (1-10):</label>
-        <input type="number" min="1" max="10" id="barne" value="${getResp(queso,'barne')}">
-        <label>Usaina (1-10):</label>
-        <input type="number" min="1" max="10" id="usaina" value="${getResp(queso,'usaina')}">
-        <label>Ehundura (1-10):</label>
-        <input type="number" min="1" max="10" id="ehundura" value="${getResp(queso,'ehundura')}">
-        <label>Zaporea (1-10):</label>
-        <input type="number" min="1" max="10" id="zaporea" value="${getResp(queso,'zaporea')}">
+    form.innerHTML = `<h3>${queso}</h3>`;
+    form.appendChild(crearCampoConBotonera('Kanpo itxura', 'kanpo', queso));
+    form.appendChild(crearCampoConBotonera('Barne itxura', 'barne', queso));
+    form.appendChild(crearCampoConBotonera('Usaina', 'usaina', queso));
+    form.appendChild(crearCampoConBotonera('Ehundura', 'ehundura', queso));
+    form.appendChild(crearCampoConBotonera('Zaporea', 'zaporea', queso));
+
+    const obsWrapper = document.createElement('div');
+    obsWrapper.innerHTML = `
         <label>Oharrak:</label>
         <textarea id="oharrak">${getResp(queso,'oharrak')}</textarea>
     `;
-    form.querySelectorAll('input,textarea').forEach(el => {
-        el.oninput = () => guardarRespuesta(queso);
-    });
+    form.appendChild(obsWrapper);
+
+    document.getElementById('oharrak').oninput = () => guardarRespuesta(queso);
+}
+
+function crearCampoConBotonera(label, campo, queso) {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = `<label>${label} (1-10):</label>`;
+    wrapper.appendChild(crearBotonera(campo, queso));
+    return wrapper;
+}
+
+function crearBotonera(campo, queso) {
+    const cont = document.createElement('div');
+    cont.classList.add('botonera');
+    cont.id = campo;
+    for (let i = 1; i <= 10; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        if (getResp(queso, campo) == i) btn.classList.add('selected');
+        btn.onclick = () => {
+            cont.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            if (!respuestas[queso]) respuestas[queso] = {};
+            respuestas[queso][campo] = i;
+        };
+        cont.appendChild(btn);
+    }
+    return cont;
 }
 
 function getResp(queso, campo) {
@@ -121,33 +169,25 @@ function getResp(queso, campo) {
 }
 
 function guardarRespuesta(queso) {
-    respuestas[queso] = {
-        kanpo: document.getElementById('kanpo').value,
-        barne: document.getElementById('barne').value,
-        usaina: document.getElementById('usaina').value,
-        ehundura: document.getElementById('ehundura').value,
-        zaporea: document.getElementById('zaporea').value,
-        oharrak: document.getElementById('oharrak').value
-    };
+    if (!respuestas[queso]) respuestas[queso] = {};
+    respuestas[queso].oharrak = document.getElementById('oharrak').value;
 }
 
 document.getElementById('enviar').onclick = () => {
     const izena = document.getElementById('nombre').value.trim();
-    const botonEnviar = document.getElementById('enviar');
-    const mensajeEstado = document.getElementById('mensajeEstado');
+    const estado = document.getElementById('estado');
+    estado.textContent = '';
+    estado.style.color = '#333';
 
     if (!izena) {
         alert('Mesedez, sartu zure izena.');
         return;
     }
 
-    botonEnviar.disabled = true;
-    mensajeEstado.textContent = '⏳ Bidaltzen… itxaron mesedez.';
+    const datos = { izena, respuestas };
 
-    const datos = {
-        izena,
-        respuestas
-    };
+    estado.textContent = 'Bidaltzen...';
+    estado.style.color = '#333';
 
     fetch('https://script.google.com/macros/s/AKfycbzL5CBm_F-DsD2nOHaF9i-cuCgcyW0CwviinRWRrkvy58Y0QpjlyHa1pzSxmxnfpqLE/exec', {
         method: 'POST',
@@ -155,15 +195,14 @@ document.getElementById('enviar').onclick = () => {
     })
     .then(res => res.text())
     .then(txt => {
-        mensajeEstado.textContent = '✅ Eskerrik asko! Zure balorazioa bidali da.';
-        setTimeout(() => location.reload(), 2000);
+        estado.textContent = 'Eskerrik asko! Zure balorazioa bidali da.';
+        estado.style.color = 'green';
+        setTimeout(() => location.reload(), 3000);
     })
     .catch(err => {
-        mensajeEstado.textContent = '❌ Errorea bidaltzerakoan. Saiatu berriz.';
+        estado.textContent = 'Errorea bidaltzerakoan.';
+        estado.style.color = 'red';
         console.error(err);
-    })
-    .finally(() => {
-        botonEnviar.disabled = false;
     });
 };
 </script>
