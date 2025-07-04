@@ -39,6 +39,14 @@
         display: block;
         margin-top: 0.5rem;
     }
+    .slider-container {
+        display: flex;
+        align-items: center;
+    }
+    .slider-container input[type=range] {
+        flex: 1;
+        margin-right: 0.5rem;
+    }
     textarea {
         width: 100%;
         padding: 0.4rem;
@@ -51,30 +59,9 @@
         border: none;
         cursor: pointer;
     }
-
-    .botonera {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.3rem;
-        margin: 0.5rem 0;
-    }
-    .botonera button {
-        flex: 1 0 18%;
-        padding: 0.4rem;
-        background: white;
-        border: 1px solid #39bda0;
-        color: #39bda0;
+    #mensaje {
         font-weight: bold;
-        cursor: pointer;
-    }
-    .botonera button.selected {
-        background: #39bda0;
-        color: white;
-    }
-
-    #estado {
         text-align: center;
-        font-weight: bold;
         margin: 1rem;
     }
 </style>
@@ -91,8 +78,9 @@
 <div id="menu"></div>
 <div id="formulario"></div>
 
+<div id="mensaje"></div>
+
 <button id="enviar">Bidali</button>
-<div id="estado"></div>
 
 <script>
 let quesos = [];
@@ -121,47 +109,42 @@ function mostrarFormulario(queso) {
     });
 
     const form = document.getElementById('formulario');
-    form.innerHTML = `<h3>${queso}</h3>`;
-    form.appendChild(crearCampoConBotonera('Kanpo itxura', 'kanpo', queso));
-    form.appendChild(crearCampoConBotonera('Barne itxura', 'barne', queso));
-    form.appendChild(crearCampoConBotonera('Usaina', 'usaina', queso));
-    form.appendChild(crearCampoConBotonera('Ehundura', 'ehundura', queso));
-    form.appendChild(crearCampoConBotonera('Zaporea', 'zaporea', queso));
-
-    const obsWrapper = document.createElement('div');
-    obsWrapper.innerHTML = `
+    form.innerHTML = `
+        <h3>${queso}</h3>
+        ${crearSliderHTML('Kanpo itxura', 'kanpo')}
+        ${crearSliderHTML('Barne itxura', 'barne')}
+        ${crearSliderHTML('Usaina', 'usaina')}
+        ${crearSliderHTML('Ehundura', 'ehundura')}
+        ${crearSliderHTML('Zaporea', 'zaporea')}
         <label>Oharrak:</label>
         <textarea id="oharrak">${getResp(queso,'oharrak')}</textarea>
     `;
-    form.appendChild(obsWrapper);
-
-    document.getElementById('oharrak').oninput = () => guardarRespuesta(queso);
+    form.querySelectorAll('input[type=range],textarea').forEach(el => {
+        el.oninput = () => guardarRespuesta(queso);
+    });
+    actualizarSliders();
 }
 
-function crearCampoConBotonera(label, campo, queso) {
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = `<label>${label} (1-10):</label>`;
-    wrapper.appendChild(crearBotonera(campo, queso));
-    return wrapper;
+function crearSliderHTML(labelText, campo) {
+    const valor = getResp(currentQueso, campo) || 5;
+    return `
+        <label>${labelText} (1-10):</label>
+        <div class="slider-container">
+            <input type="range" min="1" max="10" value="${valor}" id="${campo}">
+            <span id="${campo}_valor">${valor}</span>
+        </div>
+    `;
 }
 
-function crearBotonera(campo, queso) {
-    const cont = document.createElement('div');
-    cont.classList.add('botonera');
-    cont.id = campo;
-    for (let i = 1; i <= 10; i++) {
-        const btn = document.createElement('button');
-        btn.textContent = i;
-        if (getResp(queso, campo) == i) btn.classList.add('selected');
-        btn.onclick = () => {
-            cont.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            if (!respuestas[queso]) respuestas[queso] = {};
-            respuestas[queso][campo] = i;
+function actualizarSliders() {
+    ['kanpo','barne','usaina','ehundura','zaporea'].forEach(campo => {
+        const slider = document.getElementById(campo);
+        const valorSpan = document.getElementById(campo + '_valor');
+        slider.oninput = () => {
+            valorSpan.textContent = slider.value;
+            guardarRespuesta(currentQueso);
         };
-        cont.appendChild(btn);
-    }
-    return cont;
+    });
 }
 
 function getResp(queso, campo) {
@@ -169,39 +152,44 @@ function getResp(queso, campo) {
 }
 
 function guardarRespuesta(queso) {
-    if (!respuestas[queso]) respuestas[queso] = {};
-    respuestas[queso].oharrak = document.getElementById('oharrak').value;
+    respuestas[queso] = {
+        kanpo: document.getElementById('kanpo').value,
+        barne: document.getElementById('barne').value,
+        usaina: document.getElementById('usaina').value,
+        ehundura: document.getElementById('ehundura').value,
+        zaporea: document.getElementById('zaporea').value,
+        oharrak: document.getElementById('oharrak').value
+    };
 }
 
 document.getElementById('enviar').onclick = () => {
     const izena = document.getElementById('nombre').value.trim();
-    const estado = document.getElementById('estado');
-    estado.textContent = '';
-    estado.style.color = '#333';
+    const mensaje = document.getElementById('mensaje');
+    mensaje.textContent = 'Bidaltzen...';
+    mensaje.style.color = '#333';
 
     if (!izena) {
-        alert('Mesedez, sartu zure izena.');
+        mensaje.textContent = 'Mesedez, sartu zure izena.';
+        mensaje.style.color = 'red';
         return;
     }
-
-    const datos = { izena, respuestas };
-
-    estado.textContent = 'Bidaltzen...';
-    estado.style.color = '#333';
-
+    const datos = {
+        izena,
+        respuestas
+    };
     fetch('https://script.google.com/macros/s/AKfycbzL5CBm_F-DsD2nOHaF9i-cuCgcyW0CwviinRWRrkvy58Y0QpjlyHa1pzSxmxnfpqLE/exec', {
         method: 'POST',
         body: JSON.stringify(datos)
     })
     .then(res => res.text())
     .then(txt => {
-        estado.textContent = 'Eskerrik asko! Zure balorazioa bidali da.';
-        estado.style.color = 'green';
-        setTimeout(() => location.reload(), 3000);
+        mensaje.textContent = 'Eskerrik asko! Zure balorazioa bidali da.';
+        mensaje.style.color = 'green';
+        setTimeout(() => location.reload(), 2000);
     })
     .catch(err => {
-        estado.textContent = 'Errorea bidaltzerakoan.';
-        estado.style.color = 'red';
+        mensaje.textContent = 'Errorea bidaltzerakoan.';
+        mensaje.style.color = 'red';
         console.error(err);
     });
 };
